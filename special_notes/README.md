@@ -9,8 +9,8 @@ This directory provides additional free-energy landscape (FEL) data for MW01 (ca
 | `Traj1-3/gibbs.xpm` | RMSD–Rg FEL data from the combined MW01 Trajectories 1–3. |
 | `Traj4-6/gibbs.xpm` | RMSD–Rg FEL data from the combined MW01 Trajectories 4–6. |
 | `Traj1-6/gibbs.xpm` | RMSD–Rg FEL data from all six combined MW01 trajectories. |
-| `xpm2png(error).py` | Original erroneous implementation, retained only for reproduction and comparison. |
-| `xpm2png.py` | Corrected implementation for XPM row order and coordinate handling, with point-extraction utilities removed. |
+| `xpm2png(wrong).py` | Original erroneous implementation, retained only for reproduction and comparison. |
+| `xpm2png(correct).py` | Corrected implementation for XPM row order and energy-sign handling; it also retains the FEL point-sorting and local-minimum utilities. |
 
 ## Why the original script produces an incorrect FEL
 
@@ -22,9 +22,7 @@ energy_matrix = energy_matrix[::-1, :]
 
 Omitting this operation places energy basins at incorrect Rg coordinates. This is the primary data-order error.
 
-The corrected script also includes adaptive fixes for several potential visualization issues involving multi-line axis comments, grid dimensions, characters per pixel, energy-sign conventions, and Matplotlib compatibility. None of these issues occurred with the data analyzed in this study, and the changes were made solely to improve portability and robustness across different input files and runtime environments.
-
-Because point extraction is not needed in this workflow, all minimum-point detection, sorting, reporting, and annotation features have been removed from the revised script. The default energy convention follows `gmx sham`: the lowest energy is `ΔG = 0`, and all other values are positive.
+The default energy convention follows `gmx sham`: the lowest energy is `ΔG = 0`, and all other values are positive.
 
 ## Usage
 
@@ -32,13 +30,13 @@ Python 3, NumPy, Matplotlib, and SciPy are required. The script reads a file nam
 
 ```bash
 cd Traj1-3
-python ../xpm2png.py
+python '../xpm2png(correct).py'
 ```
 
-Alternatively, copy `xpm2png.py` into any directory containing a `gibbs.xpm` file and run it there. With its default settings, the script:
+Alternatively, copy `xpm2png(correct).py` into any directory containing a `gibbs.xpm` file and run it there. With its default settings, the script:
 
 - converts XPM coordinates from nm to Å using `k_c = 10`;
 - saves the two-dimensional FEL as `fel_from_xmp.svg`;
-- generates and displays a three-dimensional iceberg plot, but does not save it because its default `save_path` is `None`.
+- reports the lowest-energy FEL points in the terminal.
 
-The plotting range, Gaussian smoothing, contour lines, colormap, output path, and energy convention can be changed in the user-configurable parameters section at the beginning of the script. Use `xpm2png.py` for analysis; do not use `xpm2png(error).py` for production results.
+The plotting range, Gaussian smoothing, contour lines, colormap, output path, and energy convention can be changed in the user-configurable parameters section at the beginning of the script. Use `xpm2png(correct).py` for analysis; do not use `xpm2png(wrong).py` for production results.

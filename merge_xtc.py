@@ -72,7 +72,7 @@ def find_center_atom(file='step5_1.gro', bottom=None):
             dist = atom_center_dist
             # Record the atom index.
             atom_info = entry[0]
-    print(f'Atom closest to the geometric center: {entry}')
+    print(f'Atom index closest to the geometric center: {atom_info}')
     return atom_info
 
 
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Center, reconstruct, and merge GROMACS XTC files")
     # Add command-line options and their defaults.
     parser.add_argument('--gro', type=str, default=gro_file, help=f".gro file (default: {gro_file})")
-    parser.add_argument('--gro_until', type=str, default=None, help=f"End step5_*.xtc index (default: None)")
+    parser.add_argument('--gro_until', type=str, default=None, help="Stop reading the GRO file at this residue name (default: read recognized protein residues)")
     parser.add_argument('--start', type=int, default=step_start, help=f"Start step5_*.xtc index (default: {step_start})")
     parser.add_argument('--end', type=int, default=step_end, help=f"End step5_*.xtc index (default: {step_end})")
     parser.add_argument('--prod_step', type=str, default=xtc_step, help=f"Production step (default: {xtc_step})")

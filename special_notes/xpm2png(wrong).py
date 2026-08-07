@@ -11,49 +11,50 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import LinearSegmentedColormap, LightSource, Normalize
 from scipy.ndimage import gaussian_filter
 import re
-# from mpl_toolkits.mplot3d import Axes3D  # Enables 3D support; the name is not used directly.
+# from mpl_toolkits.mplot3d import Axes3D  # Enables 3D support even though the name is not used directly.
 
-###################### User-configurable parameters #############################################
+############################ User-configurable parameters ############################
 
 # Path to the XPM file.
 xpm_path = 'gibbs.xpm'
 
-# Output path for the 2D figure; use None to disable saving.
+# Output image path; set to None to disable saving.
 out_fig_path = './fel_from_xmp.svg'
 
-# Axis limits: ax.axis([xmin, xmax, ymin, ymax]), or None for automatic limits.
+# Axis limits: ax.axis([xmin, xmax, ymin, ymax]) or None.
 limit_axis = None
-# limit_axis = [1.10, 1.80, 11.52, 11.85]
+# limit_axis = [0.70, 2.10, 8.55, 9.25]
 
-# Show axis grid lines.
+# Display grid lines on the axes.
 need_grids = False
 
 # Gaussian smoothing; 0 disables smoothing.
 gauss = 0.0
 
-# Unit-conversion factor; use 10 for nm to angstrom or 0.1 for angstrom to nm.
+# Unit conversion factor, e.g. multiply nm by 10 to obtain angstroms.
 k_c = 10
 
-# Contour-line settings; use None to disable contour lines.
+# Contour-line settings; set to None to disable contour lines.
 # contour_line = None
 contour_line = {
     'level': 15,
-    'alpha': 0.9,
-    'label': True, # True labels the contour lines with their values.
+    'alpha': 0.2,
+    'label': False, # Set to True to label the contour lines.
 }
 
-# Number of minimum-energy points to report.
+# Number of lowest-energy points to report.
 top_values = 10
 
-# Colormap.
+# Colormap selection.
 # whatcmap = 'custom'
 whatcmap = 'GnBu_r'
+# whatcmap = 'custom5'
 
 ##################################################################################
 
 def make_cmap(wcmap='viridis'):
     if wcmap == 'custom1':
-    # Unevenly spaced color anchors matching the 2D palette.
+    # Nonuniform color anchors matching the 2D palette.
         stops  = [0.0, 0.11, 0.22, 0.33, 0.44, 0.55, 0.66, 0.77, 0.88, 1.0]
         colors = ["#FCFC00", "#FCCF30", "#DCBC28", "#81CC59", "#31C59F",
                 "#08B4D1", "#2895EC", "#3F6EFF", "#4646EB", "#3E27AC"][::-1]
@@ -84,11 +85,11 @@ def make_cmap(wcmap='viridis'):
 
 def parse_xpm_file(filename):
     """
-    Parse an XPM file and extract its free-energy data.
+    Parse an XPM file and extract the free-energy data.
     """
     with open(filename, 'r') as f:
         content = f.read()
-    
+
     # Extract metadata.
     title_match = re.search(r'/\*\s*title:\s*"(.*?)"\s*\*/', content)
     legend_match = re.search(r'/\*\s*legend:\s*"(.*?)"\s*\*/', content)
@@ -96,24 +97,24 @@ def parse_xpm_file(filename):
     ylabel_match = re.search(r'/\*\s*y-label:\s*"(.*?)"\s*\*/', content)
     x_axis_match = re.search(r'/\*\s*x-axis:\s*(.*?)\s*\*/', content)
     y_axis_match = re.search(r'/\*\s*y-axis:\s*(.*?)\s*\*/', content)
-    
+
     title = title_match.group(1)
     legend = legend_match.group(1)
     xlabel = xlabel_match.group(1)
     ylabel = ylabel_match.group(1)
     x_axis = [d*k_c for d in list(map(float, x_axis_match.group(1).split(' ')))]
     y_axis = [d*k_c for d in list(map(float, y_axis_match.group(1).split(' ')))]
-    
-    # Extract the color map and its numeric values.
+
+    # Extract the color mapping and associated values.
     lines = content.split('\n')
-    
-    # Locate the first grid-data row.
+
+    # Locate the start of the grid data.
     data_start = -1
     color_map = {}
-    
+
     for i, line in enumerate(lines):
         if line.startswith('"') and ' c #' in line:
-            # Parse a color-map entry such as "AA c #000000 " /* "0" */.
+            # Parse a color entry such as "AA c #000000 " /* "0" */.
             parts = line.split(' c #')
             if len(parts) >= 2:
                 symbol = parts[0].strip('"')
@@ -130,15 +131,15 @@ def parse_xpm_file(filename):
             data_start = i
             break
     
-    # Extract grid rows.
+    # Extract the grid rows.
     grid_data = []
     for i in range(data_start, len(lines)):
         line = lines[i].strip()
         if line.startswith('"') and line.endswith('",') or line.endswith('"'):
-            # Remove quotes and a trailing comma.
+            # Remove quotation marks and the trailing comma.
             clean_line = line.replace('"','').rstrip(',')
             if clean_line:
-                # Split the row into two-character symbols if explicit decoding is needed.
+                # Split the row into two-character symbols if individual symbols are needed.
                 # row = [clean_line[j:j+2] for j in range(0, len(clean_line), 2)]
                 grid_data.append(clean_line)
 
@@ -155,25 +156,25 @@ def parse_xpm_file(filename):
 
 def create_fel_from_data(grid_strings, color_map, gauss=0.5):
     """
-    Create an FEL matrix from decoded XPM data.
+    Create an FEL matrix from the supplied XPM grid data.
     """
-    # Convert grid symbols into a numeric matrix.
+    # Convert the grid data to a numeric matrix.
     energy_matrix = np.zeros((len(grid_strings), len(grid_strings)))
-    
+
     for i, row_string in enumerate(grid_strings):
         for j in range(0, len(row_string), 2):
             symbol = row_string[j:j+2]
             if symbol in color_map:
                 energy_matrix[i, j//2] = color_map[symbol]['value']
-    
-    # Shift the energy range so the maximum is zero and all other values are negative.
+
+    # Shift the energy range so that the maximum is zero and other values are negative.
     max_energy = np.max(energy_matrix)
     energy_matrix = energy_matrix - max_energy
-    
+
     # Apply Gaussian smoothing to reduce jagged edges.
     if gauss > 0:
         energy_matrix = gaussian_filter(energy_matrix, sigma=gauss)
-    
+
     return energy_matrix
 
 
@@ -183,25 +184,25 @@ def plot_fel(
         limit_axis=None, 
         save_path=None,
         need_grids=None,
-        contour_line=None,
+        contour_line=None | dict,
     ):
     """
     Plot a free-energy landscape (FEL).
-    - Draw contour lines as solid lines.
+    - Draw solid contour lines.
     - Use a built-in continuous colormap.
-    - Format colorbar ticks as integers.
+    - Use integer ticks on the colorbar.
     """
     # Create the figure.
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(5, 4))
     
-    # A built-in continuous colormap such as viridis can also be used.
+    # A built-in continuous colormap can be selected here.
     # cmap = cm.Blues
     
     cmap = make_cmap(wcmap=whatcmap)
 
-    # Draw the filled-contour plot.
+    # Draw the filled contour plot.
     X, Y = np.meshgrid(x_axis, y_axis)
-    contour_filled = ax.contourf(X, Y, energy_matrix, levels=100, cmap=cmap)
+    contour_filled = ax.contourf(X, Y, energy_matrix, levels=150, cmap=cmap)
     
     # Add solid contour lines.
     if contour_line:
@@ -212,31 +213,42 @@ def plot_fel(
             X, Y, energy_matrix, 
             levels=contour_level, 
             alpha=contour_alpha, 
-            colors='black', linewidths=1.0, linestyles="solid",
+            colors='black', linewidths=0.3, linestyles="solid",
         )
         if contour_label:
-            ax.clabel(contour_lines, inline=True, fontsize=12, fmt='%d')  # Use integer contour labels.
+            ax.clabel(contour_lines, inline=True, fontsize=6, fmt='%d')  # Format contour labels as integers.
     
-    # Set labels and title.
-    ax.set_xlabel(x_label, fontsize=14, fontweight='bold')
-    ax.set_ylabel(y_label, fontsize=14, fontweight='bold')
-    ax.set_title(title, fontsize=16, fontweight='bold')
+    # Set the width of all four axes spines.
+    for spine in ax.spines.values():
+        spine.set_linewidth(0.3)  # Spine width in points.
+
+    # Set axis labels and the title.
+    ax.set_xlabel(x_label, fontsize=12, fontweight='normal')
+    ax.set_ylabel(y_label, fontsize=12, fontweight='normal')
+    # ax.set_title(title, fontsize=16, fontweight='bold')
+    # ax.set_xlim(0, 14.9)
+    # ax.set_ylim(13.7, 19.5)
     
     # Add the colorbar.
     cbar = plt.colorbar(contour_filled, ax=ax, shrink=0.5)
-    cbar.set_label(bar_label, fontsize=14, fontweight='bold')
-    
-    # Format the colorbar with no more than eight integer ticks.
-    cbar.locator = MaxNLocator(integer=True, nbins=8)
+    cbar.set_label(bar_label, fontsize=12, fontweight='normal')
+    cbar.ax.tick_params(labelsize=8)   # Tick-label font size.
+    cbar.outline.set_linewidth(0.3)       # Border width.
+    cbar.outline.set_edgecolor('black') # Border color.
+    # Use integer ticks on the colorbar.
+    cbar.locator = MaxNLocator(integer=True, nbins=8)  # Use at most eight integer ticks.
     cbar.update_ticks()
     
-    # Set axis ticks and optional limits.
+    # Apply the requested axis limits.
     if limit_axis:
         ax.axis(limit_axis)
 
-    ax.xaxis.set_major_locator(MaxNLocator(nbins=8, integer=True))
-    ax.yaxis.set_major_locator(MaxNLocator(nbins=8, integer=True))
-    ax.tick_params(axis='both', which='major', labelsize=14)
+    # ax.xaxis.set_major_locator(MaxNLocator(nbins=8, integer=True))
+    # ax.yaxis.set_major_locator(MaxNLocator(nbins=8, integer=True))
+
+    ax.tick_params(axis='both', which='major', labelsize=10)
+    # ax.tick_params(axis='x', labelsize=12)  # Change only the x-axis labels.
+    # ax.tick_params(axis='y', labelsize=16)  # Change only the y-axis labels.
     
     # Add axis grid lines.
     if need_grids:
@@ -245,9 +257,9 @@ def plot_fel(
     # Adjust the layout.
     plt.tight_layout()
     
-    # Save the figure.
+    # Save the image.
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=600, bbox_inches='tight')
         print(f"FEL saved to: {save_path}")
     
     return fig, ax
@@ -259,10 +271,10 @@ def plot_fel_iceberg(
     show_minima=None,
     seabed=dict(
         show=True,
-        mode="contourf",   # "contourf" or "surface"
+        mode="contourf",   # Either "contourf" or "surface".
         levels=100,
         alpha=1.0,
-        offset="min",      # "zero", "min", or a numeric value such as -5.0
+        offset="min",      # Accepts "zero", "min", or a numeric value such as -5.0.
         epsilon_ratio=1e-3 # Relative offset that prevents overlap with the surface.
     ),
     light_azimuth=315,
@@ -271,12 +283,12 @@ def plot_fel_iceberg(
     zlim_margin=0.02,
 ):
     """
-    Plot an inverted 3D iceberg view.
-    - energy_matrix is expected to have a maximum of zero and all other values <= 0.
+    Create an inverted 3D iceberg view.
+    - energy_matrix is expected to have a maximum of zero and other values at or below zero.
     - seabed.offset:
-        "zero" -> place the plane at z=0
-        "min"  -> place it just below the global minimum
-        float  -> use the supplied z value directly
+        "zero" -> place the plane at z=0.
+        "min"  -> place the plane just below the global minimum.
+        float  -> use the specified z value directly.
     """
     cmap = make_cmap(wcmap=whatcmap)
     X, Y = np.meshgrid(x_axis, y_axis)
@@ -286,12 +298,12 @@ def plot_fel_iceberg(
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection="3d")
 
-    # Color normalization and lighting.
+    # Normalize colors and configure lighting.
     norm = Normalize(vmin=np.min(energy_matrix), vmax=np.max(energy_matrix))
     ls = LightSource(azdeg=light_azimuth, altdeg=light_altitude)
     face_rgb = ls.shade(energy_matrix, cmap=cmap, vert_exag=0.5, blend_mode="soft")
 
-    # Iceberg surface.
+    # Draw the iceberg surface.
     ax.plot_surface(
         X, Y, Z,
         facecolors=face_rgb,
@@ -299,7 +311,7 @@ def plot_fel_iceberg(
         linewidth=0, antialiased=True, shade=False
     )
 
-    # Place the 2D FEL plane at the minimum or a user-specified offset.
+    # Place the 2D FEL plane at the minimum or at a user-defined offset.
     if seabed and seabed.get("show", True):
         mode   = seabed.get("mode", "contourf")
         levels = seabed.get("levels", 100)
@@ -339,7 +351,7 @@ def plot_fel_iceberg(
         else:
             raise ValueError(f"Unknown seabed mode: {mode}")
 
-    # Minimum-energy points.
+    # Plot local minima.
     if show_minima:
         xs = [p["x"] for p in show_minima]
         ys = [p["y"] for p in show_minima]
@@ -348,14 +360,14 @@ def plot_fel_iceberg(
         for k, (x, y, z) in enumerate(zip(xs, ys, zs), 1):
             ax.text(x, y, z, f"{k}", color='crimson', fontsize=9)
 
-    # Axes and title.
+    # Configure axes and the title.
     z_label = bar_label
     ax.set_xlabel(x_label, labelpad=8, fontweight='bold')
     ax.set_ylabel(y_label, labelpad=8, fontweight='bold')
     ax.set_zlabel(z_label, labelpad=8, fontweight='bold')
     ax.set_title(title, pad=12, fontweight='bold')
 
-    # Fit the axes tightly without extra padding.
+    # Fit the axes tightly to the data range.
     ax.set_xlim(x_axis.min(), x_axis.max())
     ax.set_ylim(y_axis.min(), y_axis.max())
     zmin = Z.min()
@@ -365,12 +377,12 @@ def plot_fel_iceberg(
         zmin = min(zmin, offset)
     ax.set_zlim(zmin - abs(zmin) * zlim_margin, zmax)
 
-    ax.set_box_aspect([1,1,1])  # Preserve equal aspect ratios.
+    ax.set_box_aspect([1,1,1])  # Keep equal aspect ratios.
     ax.xaxis.pane.set_edgecolor('black')
     ax.yaxis.pane.set_edgecolor('black')
     ax.zaxis.pane.set_edgecolor('black')
 
-    # Colorbar.
+    # Add the colorbar.
     mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
     mappable.set_array([])
     cbar = fig.colorbar(mappable, shrink=0.6, pad=0.08)
@@ -393,13 +405,13 @@ def plot_fel_iceberg(
 
 def sort_fel_points(energy_matrix, x_axis, y_axis, top_n=None):
     """
-    Sort all points in energy_matrix from lowest to highest energy.
-    Return dictionaries containing matrix indices, coordinates, and energy values.
-    
+    Sort every point in energy_matrix from lowest to highest energy.
+    Return dictionaries containing row index, column index, x, y, and energy values.
+
     Parameters:
-    - energy_matrix: 2D numpy array, shape = (len(y_axis), len(x_axis))
-    - x_axis, y_axis: corresponding coordinate arrays
-    - top_n: optional number of lowest-energy points to return
+    - energy_matrix: 2D NumPy array with shape (len(y_axis), len(x_axis)).
+    - x_axis, y_axis: Coordinate arrays.
+    - top_n: Optional number of lowest-energy points to return; otherwise return all points.
     """
     E = np.array(energy_matrix, dtype=float)
     nrows, ncols = E.shape
@@ -425,36 +437,36 @@ def sort_fel_points(energy_matrix, x_axis, y_axis, top_n=None):
 def find_fel_minima(energy_matrix, x_axis, y_axis,
                     top_n=5,
                     exclude_edges=True,
-                    nan_policy='omit'):
+    nan_policy='omit'):
     """
-    Find all strict local minima in a 2D FEL using the eight-neighbor rule.
-    Return dictionaries containing matrix indices, coordinates, and energy values.
-    Assumption: energy_matrix.shape = (len(y_axis), len(x_axis)).
+    Find local minima that are strictly below all eight neighbors in a 2D FEL matrix.
+    Return dictionaries containing row index, column index, x, y, and energy values.
+    energy_matrix.shape is expected to equal (len(y_axis), len(x_axis)).
     """
     E = np.array(energy_matrix, dtype=float, copy=True)
 
     # Handle NaN values.
     if nan_policy == 'omit':
-        # Replace NaN with +inf so it cannot become a minimum.
+        # Replace NaN values with positive infinity so they cannot be minima.
         E = np.where(np.isnan(E), np.inf, E)
     elif nan_policy == 'propagate':
-        pass  # Preserve NaN; comparisons prevent it from becoming a minimum.
+        pass  # Preserve NaN values; no minimum can be located at a NaN position.
 
-    # Strictly compare each point with its eight neighbors.
+    # Compare strictly against all eight neighbors.
     neighbors = [(1,0),(-1,0),(0,1),(0,-1),(1,1),(1,-1),(-1,1),(-1,-1)]
     mask = np.ones_like(E, dtype=bool)
     for dy, dx in neighbors:
         shifted = np.roll(E, shift=(dy, dx), axis=(0,1))
         mask &= (E < shifted)
 
-    # Remove false edge minima introduced by np.roll wrapping.
+    # Exclude false edge minima introduced by array wrapping.
     if exclude_edges:
         mask[0, :] = False
         mask[-1, :] = False
         mask[:, 0] = False
         mask[:, -1] = False
 
-    # Collect the indices of all minima.
+    # Collect all local-minimum indices.
     idxs = np.argwhere(mask)
     minima = []
     for (i, j) in idxs:
@@ -465,7 +477,7 @@ def find_fel_minima(energy_matrix, x_axis, y_axis,
             'y': float(y_axis[i]),
             'z': float(E[i, j]),
         })
-    # Sort minima from lowest to highest energy.
+    # Sort from lowest to highest energy for easier inspection.
     minima.sort(key=lambda d: d['z'])
     return minima[:top_n]
 
@@ -473,14 +485,14 @@ def find_fel_minima(energy_matrix, x_axis, y_axis,
 
 def main():
     """
-    Run the FEL generation workflow.
+    Run the FEL conversion and plotting workflow.
     """
     costom_file = xpm_path
 
     print("Free Energy Landscape (FEL) Generator")
     print("=====================================")
     
-    # Generate the FEL from the data in the XPM file.
+    # Generate the FEL from the data stored in the XPM file.
     try:
         print("Generating FEL from XPM data...")
         read_data = parse_xpm_file(costom_file)
@@ -505,21 +517,21 @@ def main():
             title=read_data['title'],
             x_label=read_data['xlabel'],
             y_label=read_data['ylabel'],
-            bar_label='Gibbs (kJ/mol)',
+            bar_label='-ΔG (kJ/mol)',
             save_path=out_fig_path,
             limit_axis=limit_axis,
             need_grids=need_grids,
             contour_line=contour_line,
         )
-        print("✓ FEL generated successfully from XMP data")
+        print("✓ FEL generated successfully from XPM data")
 
-        # Optionally generate a 3D iceberg plot.
+        # Optional: generate a 3D iceberg plot.
         fig3d, ax3d = plot_fel_iceberg(
             energy_matrix, x_axis, y_axis,
             title=read_data['title'] + " (3D Iceberg)",
             x_label=read_data['xlabel'],
             y_label=read_data['ylabel'],
-            bar_label='Gibbs (kJ/mol)',
+            bar_label='-ΔG (kJ/mol)',
             save_path=None,
             # show_minima=value_list,
             show_minima=None,
@@ -528,8 +540,8 @@ def main():
                 mode="contourf",
                 levels=100,
                 alpha=1.0,
-                offset="min",       # Place the plane at the minimum (the default).
-                epsilon_ratio=1e-3, # Increase to 1e-2 for more visual separation.
+                offset="min",       # Place the plane at the minimum; this is the default.
+                epsilon_ratio=1e-3, # Increase to 1e-2 for greater separation.
             ),
             light_azimuth=315,
             light_altitude=45,
@@ -537,7 +549,7 @@ def main():
         )
 
     except Exception as e:
-        print(f"✗ Error generating FEL from XMP data: {e}")
+        print(f"✗ Error generating FEL from XPM data: {e}")
     
     plt.show()
     
