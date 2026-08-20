@@ -1,13 +1,13 @@
-# special_notes — MW01 FEL data and `xpm2png.py`
+# special_notes — MW01 FEL data and XPM conversion scripts
 
-This directory provides additional free-energy landscape (FEL) data for MW01 (case 3) and documents, reproduces, and corrects the XPM parsing errors in the original `xpm2png.py` implementation.
+This directory provides companion free-energy landscape (FEL) data for MW01 (Case 3) and documents, reproduces, and corrects the XPM row-order error in the original conversion script. The Traj1–3 and Traj4–6 XPM files mirror the corresponding files in [`../case3/data/`](../case3/data/); the combined Traj1–6 XPM file is provided only here.
 
 ## Contents
 
 | File or directory | Description |
 | --- | --- |
-| `Traj1-3/gibbs.xpm` | RMSD–Rg FEL data from the combined MW01 Trajectories 1–3. |
-| `Traj4-6/gibbs.xpm` | RMSD–Rg FEL data from the combined MW01 Trajectories 4–6. |
+| `Traj1-3/gibbs.xpm` | RMSD–Rg FEL data from the combined MW01 Trajectories 1–3; identical to [`../case3/data/gibbs1-3.xpm`](../case3/data/gibbs1-3.xpm). |
+| `Traj4-6/gibbs.xpm` | RMSD–Rg FEL data from the combined MW01 Trajectories 4–6; identical to [`../case3/data/gibbs4-6.xpm`](../case3/data/gibbs4-6.xpm). |
 | `Traj1-6/gibbs.xpm` | RMSD–Rg FEL data from all six combined MW01 trajectories. |
 | `xpm2png(wrong).py` | Original erroneous implementation, retained only for reproduction and comparison. |
 | `xpm2png(correct).py` | Corrected implementation for XPM row order and energy-sign handling; it also retains the FEL point-sorting and local-minimum utilities. |
