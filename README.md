@@ -1,5 +1,8 @@
 # mimotopeMD
 
+Code and data accompanying: **Z. Sha et al., "Mimotope-Guided Molecular Dynamics Enables Precise Functional Epitope Mapping," *J. Chem. Inf. Model.* 2026, 66 (17), 11259–11274.**
+DOI: [10.1021/acs.jcim.6c01562](https://doi.org/10.1021/acs.jcim.6c01562)
+
 This repository contains GROMACS molecular dynamics (MD) input files and analysis data for four antibody–mimotope systems. The data include RMSD, radius of gyration (Rg), free-energy landscape (FEL), and peptide–antibody contact-frequency results derived from three independent 1-μs trajectories for each system.
 
 The repository also includes a frame-normalized contact-frequency matrix for the ChiLob 7/4–CD40 crystal complex (PDB: 6FAX).
